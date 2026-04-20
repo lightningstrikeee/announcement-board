@@ -1,0 +1,242 @@
+.page-shell {
+  width: min(1100px, 94vw);
+  margin: 2.5rem auto;
+  display: grid;
+  gap: 1.4rem;
+}
+
+.hero-banner {
+  background: linear-gradient(130deg, #12234d 0%, #0f6f6d 56%, #1ca87f 100%);
+  color: #f5fcff;
+  border-radius: 1.2rem;
+  padding: 1.8rem;
+  box-shadow: 0 20px 50px rgba(2, 11, 27, 0.25);
+  animation: fade-in 350ms ease-out;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.78rem;
+  opacity: 0.9;
+}
+
+.hero-banner h1 {
+  margin: 0.4rem 0;
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 56ch;
+  color: rgba(244, 252, 255, 0.92);
+}
+
+.layout-grid {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 1rem;
+}
+
+.panel {
+  border-radius: 1rem;
+  border: 1px solid #d9e3df;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(6, 25, 32, 0.08);
+  padding: 1rem;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 1.28rem;
+}
+
+.announcement-form {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.announcement-form label {
+  display: grid;
+  gap: 0.35rem;
+  font-weight: 700;
+  color: #22343a;
+}
+
+.announcement-form input,
+.announcement-form textarea,
+button {
+  font: inherit;
+}
+
+.announcement-form input,
+.announcement-form textarea {
+  border: 1px solid #bdd0ca;
+  border-radius: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  background: #f8fcfa;
+}
+
+.announcement-form input:focus,
+.announcement-form textarea:focus {
+  outline: 3px solid rgba(12, 167, 126, 0.25);
+  border-color: #0ca77e;
+}
+
+.pin-toggle {
+  display: flex !important;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 600;
+}
+
+.pin-toggle input {
+  width: 1rem;
+  height: 1rem;
+}
+
+button {
+  border: none;
+  border-radius: 0.65rem;
+  padding: 0.58rem 0.9rem;
+  background: #0f6f6d;
+  color: #f4fdff;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 140ms ease, filter 140ms ease;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.06);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.66;
+}
+
+.ghost-button {
+  background: transparent;
+  color: #184652;
+  border: 1px solid #b8cfd5;
+}
+
+.form-error {
+  margin: 0;
+  border-radius: 0.65rem;
+  padding: 0.6rem 0.7rem;
+  background: #ffefef;
+  color: #8d2222;
+}
+
+.state-box {
+  border-radius: 0.75rem;
+  background: #f3faf8;
+  border: 1px solid #d2e6df;
+  padding: 0.8rem;
+  color: #26414a;
+  margin-bottom: 0.7rem;
+}
+
+.state-box.error {
+  background: #fff2f2;
+  border-color: #ffcfcf;
+  color: #842222;
+}
+
+.announcement-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.announcement {
+  border: 1px solid #d8e3e0;
+  border-radius: 0.82rem;
+  padding: 0.8rem;
+  background: #fcfffd;
+}
+
+.announcement.pinned {
+  border-color: #0ca77e;
+  background: linear-gradient(180deg, #eefbf5 0%, #fcfffe 100%);
+}
+
+.announcement-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.announcement h3 {
+  margin: 0;
+  font-size: 1.08rem;
+  color: #12303a;
+}
+
+.badge {
+  border-radius: 999px;
+  border: 1px solid #0ca77e;
+  color: #0a6e53;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.07em;
+  font-weight: 700;
+}
+
+.body-text {
+  margin: 0.5rem 0;
+  color: #2f4b56;
+  white-space: pre-wrap;
+}
+
+.meta {
+  margin: 0;
+  font-size: 0.86rem;
+  color: #5d727d;
+}
+
+.danger-link {
+  margin-top: 0.6rem;
+  background: #ffe8e8;
+  color: #992929;
+  border: 1px solid #f3b8b8;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 920px) {
+  .page-shell {
+    margin: 1.3rem auto;
+  }
+
+  .layout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-banner {
+    padding: 1.2rem;
+  }
+}
