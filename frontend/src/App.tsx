@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import './App.css'
 
 type Announcement = {
-  id: number
+  id: string
   title: string
   body: string
   author: string
@@ -18,7 +18,7 @@ type CreateAnnouncementInput = {
   pinned: boolean
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001'
 
 async function fetchAnnouncements(): Promise<Announcement[]> {
   const response = await fetch(`${API_BASE_URL}/announcements`)
@@ -50,7 +50,7 @@ async function createAnnouncement(
   return (await response.json()) as Announcement
 }
 
-async function removeAnnouncement(id: number): Promise<void> {
+async function removeAnnouncement(id: string): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/announcements/${id}`, {
     method: 'DELETE',
   })
@@ -82,7 +82,7 @@ function App() {
   const [listError, setListError] = useState<string | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [createLoading, setCreateLoading] = useState(false)
-  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
