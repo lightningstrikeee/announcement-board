@@ -1,0 +1,8 @@
+{
+  "extends": "../../backend/tsconfig.spec.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "typeRoots": ["../../backend/node_modules/@types"]
+  },
+  "include": ["./**/*.ts"]
+}

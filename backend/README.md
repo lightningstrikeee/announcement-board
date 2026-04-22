@@ -15,6 +15,12 @@ npm install
 npm run start:dev
 ```
 
+4. Run tests:
+
+```bash
+npm test
+```
+
 ## API
 
 - `POST /announcements`
