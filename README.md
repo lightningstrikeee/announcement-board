@@ -1,21 +1,135 @@
-# announcement-board
+# Announcement Board
 
-## Run Full Stack With One Command
+Internal team announcement board with NestJS API, React frontend, and PostgreSQL, all running in Docker.
 
-From the repository root:
+## Quick Start
+
+From repository root:
 
 ```bash
 docker compose up --build
 ```
 
-This starts:
+Services:
 
-- Frontend (Vite): `http://localhost:5173`
-- Backend (NestJS API): `http://localhost:3001`
-- PostgreSQL: `localhost:5432`
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:3001
+- PostgreSQL: localhost:5432
 
-## Notes
+## Demo Account
 
-- API and UI are separated into `backend/` and `frontend/`.
-- Database runs in Docker using PostgreSQL.
-- `GET /announcements` returns pinned records first, then newest by `created_at`.
+If you do not want to register a new account, use this demo login:
+
+- ID (email): nuntapop.khe@gmail.com
+- Password: Hello123
+
+## End-to-End Flow
+
+1. Register or login.
+2. Create announcement.
+3. See it in feed.
+4. Pin or unpin from card pin icon.
+5. Open details, edit (owner only), or delete (owner only).
+
+Notes:
+
+- Pin/unpin is allowed for any logged-in user.
+- Edit and delete are owner-only.
+- Detail modal shows "Last edited" timestamp after real updates.
+
+## Main Features
+
+- JWT auth: register, login, me.
+- Feed sorting options:
+  - No sort
+  - Pinned first (latest)
+  - Publish date (newest/oldest)
+  - Owned by me first
+  - Owner name (A-Z / Z-A)
+- Confirmation dialogs for:
+  - Register submit
+  - Logout
+  - Delete announcement
+  - Save edit changes
+- Success toasts for publish, update, logout.
+
+## API Reference
+
+### Auth
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | /auth/register | Register and return access token + user |
+| POST | /auth/login | Login and return access token + user |
+| GET | /auth/me | Get current user from JWT |
+
+### Announcements
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | /announcements | Create (auth required) |
+| GET | /announcements | List all |
+| GET | /announcements/:id | Get one |
+| PATCH | /announcements/:id | Update (owner only, auth required) |
+| PATCH | /announcements/:id/pin | Toggle pin (auth required) |
+| DELETE | /announcements/:id | Delete (owner only, auth required, returns 204) |
+
+## Architecture Decisions
+
+### Backend
+
+- NestJS module/controller/service structure.
+- TypeORM with `synchronize: true` for dev speed.
+- DTO validation via class-validator.
+- Password hashing via bcrypt.
+- Ownership checks enforced server-side for update and delete.
+- DB ordering for list endpoint by `pinned DESC, created_at DESC`.
+
+### Frontend
+
+- React + TypeScript + Vite.
+- API calls centralized in App.tsx typed helpers.
+- UI state-driven modals and confirmations.
+- Handwritten CSS (no UI framework).
+
+### Database
+
+- PostgreSQL 16 in Docker.
+- Named volume `postgres_data` for persistence.
+- Healthcheck on db, backend waits for healthy db.
+
+## Tests
+
+### Backend unit tests
+
+```bash
+cd backend
+npm install
+npm test
+```
+
+Covers:
+
+- DTO validation
+- create/default pin
+- list ordering
+- findOne + not found
+- update + forbidden owner case
+- delete + not found
+
+### Backend smoke test
+
+```bash
+# from repository root
+"C:/Program Files/Git/bin/bash.exe" test/smoke-backend.sh
+```
+
+Why Git Bash path on Windows:
+
+- `bash` may point to WSL launcher on some machines and fail.
+- Direct Git Bash path is reliable in this repo setup.
+
+## Known Dev-Mode Tradeoff
+
+- `synchronize: true` is enabled for development convenience.
+- For production, replace with migrations.
