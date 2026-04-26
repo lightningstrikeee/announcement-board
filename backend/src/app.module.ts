@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AnnouncementsModule } from './announcements/announcements.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { AnnouncementsModule } from './announcements/announcements.module';
         synchronize: true,
       }),
     }),
+    AuthModule,
     AnnouncementsModule,
   ],
 })

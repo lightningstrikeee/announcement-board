@@ -12,11 +12,6 @@ export class UpdateAnnouncementDto {
   body?: string;
 
   @IsOptional()
-  @IsString({ message: 'author must be a string' })
-  @IsNotEmpty({ message: 'author cannot be empty' })
-  author?: string;
-
-  @IsOptional()
   @IsBoolean({ message: 'pinned must be a boolean' })
   pinned?: boolean;
 }
