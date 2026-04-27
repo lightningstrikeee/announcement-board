@@ -10,13 +10,16 @@ describe('CreateAnnouncementDto validation', () => {
     const errors = await validate(dto);
     const messages = errors.flatMap((error) => Object.values(error.constraints ?? {}));
 
-    expect(messages).toEqual(expect.arrayContaining(['title is required', 'body is required']));
+    expect(messages).toEqual(
+      expect.arrayContaining(['title is required', 'body is required', 'author is required']),
+    );
   });
 
   it('rejects invalid pinned type', async () => {
     const dto = plainToInstance(CreateAnnouncementDto, {
       title: 'Hello',
       body: 'Body',
+      author: 'Jimmy',
       pinned: 'yes',
     });
 

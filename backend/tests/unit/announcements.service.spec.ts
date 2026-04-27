@@ -3,6 +3,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { DeleteResult, Repository } from 'typeorm';
 import { Announcement } from '../../src/announcements/announcement.entity';
 import { AnnouncementsService } from '../../src/announcements/announcements.service';
+import { User } from '../../src/users/user.entity';
 
 const mockUser = {
   sub: 'user-1',
@@ -16,6 +17,7 @@ const mockUser = {
 type RepoMethods = {
   create: jest.Mock<Announcement, [Partial<Announcement>]>;
   save: jest.Mock<Promise<Announcement>, [Announcement]>;
+  count: jest.Mock<Promise<number>, []>;
   find: jest.Mock<Promise<Announcement[]>, [unknown?]>;
   findOne: jest.Mock<Promise<Announcement | null>, [unknown]>;
   merge: jest.Mock<Announcement, [Announcement, Partial<Announcement>]>;
@@ -80,6 +82,7 @@ function createRepositoryStub(initialData: Announcement[] = []): RepoMethods {
   return {
     create,
     save,
+    count: jest.fn(async () => data.length),
     find,
     findOne,
     merge,
@@ -87,8 +90,28 @@ function createRepositoryStub(initialData: Announcement[] = []): RepoMethods {
   };
 }
 
+function createUserRepositoryStub() {
+  const users: User[] = [];
+
+  return {
+    findOne: jest.fn(async (options: any): Promise<User | null> => {
+      const email = options.where && 'email' in options.where ? options.where.email : undefined;
+      return users.find((user) => user.email === email) ?? null;
+    }),
+    create: jest.fn((entityLike: Partial<User>) => entityLike as User),
+    save: jest.fn(async (user: User): Promise<User> => {
+      const savedUser = { ...user, id: user.id ?? `user-${users.length + 1}` };
+      users.push(savedUser);
+      return savedUser;
+    }),
+  };
+}
+
 function createService(repo: RepoMethods): AnnouncementsService {
-  return new AnnouncementsService(repo as unknown as Repository<Announcement>);
+  return new AnnouncementsService(
+    repo as unknown as Repository<Announcement>,
+    createUserRepositoryStub() as unknown as Repository<User>,
+  );
 }
 
 describe('AnnouncementsService', () => {
@@ -99,6 +122,7 @@ describe('AnnouncementsService', () => {
     const result = await service.create({
       title: 'Title',
       body: 'Body',
+      author: 'Product Team',
     }, mockUser);
 
     expect(result.id).toBeDefined();
@@ -108,7 +132,7 @@ describe('AnnouncementsService', () => {
       expect.objectContaining({
         title: 'Title',
         body: 'Body',
-        author: 'Jim Hendrix',
+        author: 'Product Team',
         owner_id: 'user-1',
         pinned: false,
       }),
@@ -203,9 +227,14 @@ describe('AnnouncementsService', () => {
     ]);
     const service = createService(repo);
 
-    const result = await service.update('x2', { title: 'New title' }, 'user-1');
+    const result = await service.update(
+      'x2',
+      { title: 'New title', author: 'Updated Author' },
+      'user-1',
+    );
 
     expect(result.title).toBe('New title');
+    expect(result.author).toBe('Updated Author');
     expect(repo.merge).toHaveBeenCalled();
   });
 

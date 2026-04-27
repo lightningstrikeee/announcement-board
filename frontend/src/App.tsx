@@ -46,12 +46,14 @@ type Announcement = {
 type CreateAnnouncementInput = {
   title: string
   body: string
+  author: string
   pinned: boolean
 }
 
 type UpdateAnnouncementInput = {
   title: string
   body: string
+  author: string
   pinned: boolean
 }
 
@@ -256,11 +258,21 @@ function getEditedTimestamp(announcement: Announcement): string | null {
     return null
   }
 
-  if (updatedMs - createdMs < 60_000) {
+  if (updatedMs <= createdMs) {
     return null
   }
 
   return formatCreatedDate(announcement.updated_at)
+}
+
+function sortPinnedLatest(announcementsToSort: Announcement[]): Announcement[] {
+  return [...announcementsToSort].sort((a, b) => {
+    if (a.pinned !== b.pinned) {
+      return a.pinned ? -1 : 1
+    }
+
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  })
 }
 
 function formatRequiredFieldsMessage(missingFields: string[]): string {
@@ -293,7 +305,7 @@ function App() {
   const [isEditingSelected, setIsEditingSelected] = useState(false)
   const [showOwnerMenu, setShowOwnerMenu] = useState(false)
   const [announcementActionConfirm, setAnnouncementActionConfirm] = useState<
-    { type: 'delete'; announcement: Announcement } | null
+    { type: 'delete' | 'pin'; announcement: Announcement } | null
   >(null)
   const [showSaveEditConfirm, setShowSaveEditConfirm] = useState(false)
   const [feedSortMode, setFeedSortMode] = useState<FeedSortMode>('none')
@@ -301,9 +313,11 @@ function App() {
 
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
+  const [author, setAuthor] = useState('')
   const [pinned, setPinned] = useState(false)
   const [editTitle, setEditTitle] = useState('')
   const [editBody, setEditBody] = useState('')
+  const [editAuthor, setEditAuthor] = useState('')
   const [editPinned, setEditPinned] = useState(false)
 
   const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_STORAGE_KEY))
@@ -339,6 +353,16 @@ function App() {
         ? 'register'
         : 'none'
 
+  const defaultAuthor = currentUser
+    ? `${currentUser.name} ${currentUser.surname}`.trim()
+    : ''
+
+  useEffect(() => {
+    if (defaultAuthor) {
+      setAuthor(defaultAuthor)
+    }
+  }, [defaultAuthor])
+
   const sortedAnnouncements = useMemo(() => {
     const byDateDesc = (a: Announcement, b: Announcement) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -346,15 +370,8 @@ function App() {
     const byDateAsc = (a: Announcement, b: Announcement) =>
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
 
-    if (feedSortMode === 'none') {
-      return [...announcements]
-    }
-
-    return [...announcements].sort((a, b) => {
-      if (feedSortMode === 'pinned-latest') {
-        if (a.pinned !== b.pinned) {
-          return a.pinned ? -1 : 1
-        }
+    const bySelectedMode = (a: Announcement, b: Announcement) => {
+      if (feedSortMode === 'none' || feedSortMode === 'pinned-latest') {
         return byDateDesc(a, b)
       }
 
@@ -385,7 +402,15 @@ function App() {
 
       const byOwner = b.author.localeCompare(a.author, undefined, { sensitivity: 'base' })
       return byOwner !== 0 ? byOwner : byDateDesc(a, b)
-    })
+    }
+
+    const pinnedAnnouncements = announcements.filter((announcement) => announcement.pinned)
+    const unpinnedAnnouncements = announcements.filter((announcement) => !announcement.pinned)
+
+    return [
+      ...pinnedAnnouncements.sort(bySelectedMode),
+      ...unpinnedAnnouncements.sort(bySelectedMode),
+    ]
   }, [announcements, feedSortMode, currentUser?.id])
 
   const selectedAnnouncement = useMemo(() => {
@@ -413,7 +438,7 @@ function App() {
 
     try {
       const data = await fetchAnnouncements()
-      setAnnouncements(data)
+      setAnnouncements(sortPinnedLatest(data))
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Could not load announcements.'
@@ -544,6 +569,7 @@ function App() {
       .then((user) => setCurrentUser(user))
       .catch(() => {
         clearSession()
+        setAuthError('Session expired. Please login again.')
       })
   }, [token])
 
@@ -592,6 +618,10 @@ function App() {
       missingFields.push('Body')
     }
 
+    if (!author.trim()) {
+      missingFields.push('Author')
+    }
+
     if (missingFields.length > 0) {
       setFormError(formatRequiredFieldsMessage(missingFields))
       return
@@ -603,17 +633,18 @@ function App() {
         {
           title: title.trim(),
           body: body.trim(),
+          author: author.trim(),
           pinned,
         },
         token,
       )
 
-      setAnnouncements((previous) => [created, ...previous])
-      setSelectedAnnouncementId(created.id)
+      setAnnouncements((previous) => sortPinnedLatest([created, ...previous]))
       setIsEditingSelected(false)
       setDetailError(null)
       setTitle('')
       setBody('')
+      setAuthor(defaultAuthor)
       setPinned(false)
       setToast('Announcement published successfully!')
       setTimeout(() => setToast(null), 3000)
@@ -653,9 +684,17 @@ function App() {
     }
   }
 
-  async function handleTogglePin(announcement: Announcement, event: MouseEvent) {
+  function handleTogglePin(announcement: Announcement, event: MouseEvent) {
     event.stopPropagation()
 
+    if (!token) {
+      return
+    }
+
+    setAnnouncementActionConfirm({ type: 'pin', announcement })
+  }
+
+  async function confirmTogglePin(announcement: Announcement) {
     if (!token) {
       return
     }
@@ -664,8 +703,10 @@ function App() {
     try {
       const updated = await togglePinAnnouncement(announcement.id, token)
       setAnnouncements((previous) =>
-        previous.map((item) => (item.id === updated.id ? updated : item)),
+        sortPinnedLatest(previous.map((item) => (item.id === updated.id ? updated : item))),
       )
+      setToast(updated.pinned ? 'Announcement pinned successfully!' : 'Announcement unpinned successfully!')
+      setTimeout(() => setToast(null), 3000)
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Could not toggle pin status.'
@@ -714,10 +755,14 @@ function App() {
       return
     }
 
-    const { announcement } = announcementActionConfirm
+    const { announcement, type } = announcementActionConfirm
     setAnnouncementActionConfirm(null)
 
-    await handleDeleteAnnouncement(announcement)
+    if (type === 'delete') {
+      await handleDeleteAnnouncement(announcement)
+    } else {
+      await confirmTogglePin(announcement)
+    }
   }
 
   function startEditingAnnouncement(announcement: Announcement) {
@@ -727,6 +772,7 @@ function App() {
 
     setEditTitle(announcement.title)
     setEditBody(announcement.body)
+    setEditAuthor(announcement.author)
     setEditPinned(announcement.pinned)
     setIsEditingSelected(true)
     setShowOwnerMenu(false)
@@ -754,6 +800,10 @@ function App() {
       missingFields.push('Body')
     }
 
+    if (!editAuthor.trim()) {
+      missingFields.push('Author')
+    }
+
     if (missingFields.length > 0) {
       setDetailError(formatRequiredFieldsMessage(missingFields))
       return
@@ -777,15 +827,16 @@ function App() {
         {
           title: editTitle.trim(),
           body: editBody.trim(),
+          author: editAuthor.trim(),
           pinned: editPinned,
         },
         token,
       )
 
       setAnnouncements((previous) =>
-        previous.map((announcement) =>
+        sortPinnedLatest(previous.map((announcement) =>
           announcement.id === updated.id ? updated : announcement,
-        ),
+        )),
       )
       setIsEditingSelected(false)
       setToast('Announcement updated successfully!')
@@ -865,7 +916,9 @@ function App() {
         <div className="modal-overlay">
           <div className="modal">
             <p>
-              {`Delete announcement "${announcementActionConfirm.announcement.title}"? This action cannot be undone.`}
+              {announcementActionConfirm.type === 'delete'
+                ? `Delete announcement "${announcementActionConfirm.announcement.title}"? This action cannot be undone.`
+                : `${announcementActionConfirm.announcement.pinned ? 'Unpin' : 'Pin'} announcement "${announcementActionConfirm.announcement.title}"?`}
             </p>
             <div className="modal-actions">
               <button
@@ -877,19 +930,29 @@ function App() {
               </button>
               <button
                 type="button"
-                className="danger-link"
+                className={announcementActionConfirm.type === 'delete' ? 'danger-link' : undefined}
                 disabled={
-                  deletingId === announcementActionConfirm.announcement.id
+                  announcementActionConfirm.type === 'delete'
+                    ? deletingId === announcementActionConfirm.announcement.id
+                    : togglingPinId === announcementActionConfirm.announcement.id
                 }
                 onClick={() => {
                   confirmAnnouncementAction().catch(() => {
-                    // Error state is handled by handleDeleteAnnouncement
+                    // Error state is handled by the action handlers
                   })
                 }}
               >
-                {deletingId === announcementActionConfirm.announcement.id
-                  ? 'Deleting...'
-                  : 'Yes, Delete'}
+                {announcementActionConfirm.type === 'delete'
+                  ? deletingId === announcementActionConfirm.announcement.id
+                    ? 'Deleting...'
+                    : 'Yes, Delete'
+                  : togglingPinId === announcementActionConfirm.announcement.id
+                    ? announcementActionConfirm.announcement.pinned
+                      ? 'Unpinning...'
+                      : 'Pinning...'
+                    : announcementActionConfirm.announcement.pinned
+                      ? 'Yes, Unpin'
+                      : 'Yes, Pin'}
               </button>
             </div>
           </div>
@@ -1090,6 +1153,17 @@ function App() {
                 rows={6}
                 placeholder="Write details for your team..."
                 maxLength={2000}
+                disabled={!currentUser}
+              />
+            </label>
+
+            <label>
+              Author
+              <input
+                value={author}
+                onChange={(event) => setAuthor(event.target.value)}
+                placeholder="Your name or team"
+                maxLength={120}
                 disabled={!currentUser}
               />
             </label>
@@ -1312,6 +1386,15 @@ function App() {
                     onChange={(event) => setEditBody(event.target.value)}
                     rows={6}
                     maxLength={2000}
+                  />
+                </label>
+
+                <label>
+                  Author
+                  <input
+                    value={editAuthor}
+                    onChange={(event) => setEditAuthor(event.target.value)}
+                    maxLength={120}
                   />
                 </label>
 
