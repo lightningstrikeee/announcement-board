@@ -23,10 +23,12 @@ If you do not want to register a new account, use this demo login:
 - ID (email): nuntapop.khe@gmail.com
 - Password: Hello123
 
+This account is seeded automatically when the backend starts with an empty database.
+
 ## End-to-End Flow
 
 1. Register or login.
-2. Create announcement.
+2. Create announcement with title, body, author, and optional pin.
 3. See it in feed.
 4. Pin or unpin from card pin icon.
 5. Open details, edit (owner only), or delete (owner only).
@@ -73,6 +75,26 @@ Notes:
 | PATCH | /announcements/:id | Update (owner only, auth required) |
 | PATCH | /announcements/:id/pin | Toggle pin (auth required) |
 | DELETE | /announcements/:id | Delete (owner only, auth required, returns 204) |
+
+Example create request:
+
+```bash
+curl -X POST http://localhost:3001/announcements \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Product launch update",
+    "body": "Launch notes are ready for review.",
+    "author": "Product Team",
+    "pinned": true
+  }'
+```
+
+Example list request:
+
+```bash
+curl http://localhost:3001/announcements
+```
 
 ## Architecture Decisions
 
@@ -129,7 +151,15 @@ Why Git Bash path on Windows:
 - `bash` may point to WSL launcher on some machines and fail.
 - Direct Git Bash path is reliable in this repo setup.
 
-## Known Dev-Mode Tradeoff
+## Tradeoffs / Assumptions
 
 - `synchronize: true` is enabled for development convenience.
 - For production, replace with migrations.
+- Announcements require login so the app can track ownership for edit and delete actions.
+- The author field is prefilled from the logged-in user's name, but can be edited before publishing.
+- Fresh databases are seeded with a demo user and two announcements so Docker starts with useful data.
+
+## With More Time
+
+- Add quality-of-life features such as image uploads and comment threads on announcements.
+- Add separate announcement channels for each department.

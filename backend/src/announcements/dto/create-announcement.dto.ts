@@ -9,6 +9,10 @@ export class CreateAnnouncementDto {
   @IsNotEmpty({ message: 'body is required' })
   body!: string;
 
+  @IsString({ message: 'author must be a string' })
+  @IsNotEmpty({ message: 'author is required' })
+  author!: string;
+
   @IsOptional()
   @IsBoolean({ message: 'pinned must be a boolean' })
   pinned?: boolean;

@@ -5,53 +5,57 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { hash } from 'bcryptjs';
 import { Repository } from 'typeorm';
+import { User } from '../users/user.entity';
 import { Announcement } from './announcement.entity';
 import { CreateAnnouncementDto } from './dto/create-announcement.dto';
 import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
 import { JwtUserPayload } from '../auth/auth.types';
+
+const DEMO_USER = {
+  email: 'nuntapop.khe@gmail.com',
+  password: 'Hello123',
+  name: 'Nuntapop',
+  surname: 'Kheawthanong',
+  department: 'Engineering',
+  position: 'Developer',
+};
 
 @Injectable()
 export class AnnouncementsService implements OnModuleInit {
   constructor(
     @InjectRepository(Announcement)
     private readonly announcementsRepository: Repository<Announcement>,
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
   ) {}
 
   async onModuleInit(): Promise<void> {
-    await this.seedInitialAnnouncements();
+    await this.seedInitialData();
   }
 
-  private async seedInitialAnnouncements(): Promise<void> {
+  private async seedInitialData(): Promise<void> {
+    const demoUser = await this.ensureDemoUser();
     const existingCount = await this.announcementsRepository.count();
 
     if (existingCount > 0) {
       return;
     }
 
-    const seedData: Array<Pick<Announcement, 'title' | 'body' | 'author' | 'pinned'>> = [
+    const seedData: Array<Pick<Announcement, 'title' | 'body' | 'author' | 'owner_id' | 'pinned'>> = [
       {
         title: 'Platform Maintenance Window',
         body: 'Scheduled maintenance is planned for Sunday at 02:00 AM. Some services may be briefly unavailable.',
         author: 'Operations Team',
+        owner_id: null,
         pinned: true,
       },
       {
-        title: 'Quarterly Goals Published',
-        body: 'Q2 goals are now published in the strategy workspace. Please review and align your team plans.',
-        author: 'Leadership Office',
-        pinned: true,
-      },
-      {
-        title: 'UI Polish Sprint',
-        body: 'Frontend team will run a 3-day polish sprint focused on forms, spacing consistency, and feedback states.',
-        author: 'Design System Team',
-        pinned: false,
-      },
-      {
-        title: 'Team Lunch Next Friday',
-        body: 'Company lunch is booked for next Friday at 12:30 PM in the main hall. RSVP by Wednesday.',
-        author: 'People Operations',
+        title: 'Welcome to the Announcement Board',
+        body: 'This announcement belongs to the seeded demo account, so you can log in, edit it, and test the delete flow.',
+        author: `${DEMO_USER.name} ${DEMO_USER.surname}`,
+        owner_id: demoUser.id,
         pinned: false,
       },
     ];
@@ -60,13 +64,37 @@ export class AnnouncementsService implements OnModuleInit {
     await this.announcementsRepository.save(seedAnnouncements);
   }
 
+  private async ensureDemoUser(): Promise<User> {
+    const existingUser = await this.usersRepository.findOne({
+      where: { email: DEMO_USER.email },
+    });
+
+    if (existingUser) {
+      return existingUser;
+    }
+
+    const displayName = `${DEMO_USER.name} ${DEMO_USER.surname}`;
+    const user = this.usersRepository.create({
+      email: DEMO_USER.email,
+      password_hash: await hash(DEMO_USER.password, 10),
+      display_name: displayName,
+      name: DEMO_USER.name,
+      surname: DEMO_USER.surname,
+      department: DEMO_USER.department,
+      position: DEMO_USER.position,
+      role: 'user',
+    });
+
+    return this.usersRepository.save(user);
+  }
+
   async create(
     createAnnouncementDto: CreateAnnouncementDto,
     user: JwtUserPayload,
   ): Promise<Announcement> {
     const announcement = this.announcementsRepository.create({
       ...createAnnouncementDto,
-      author: `${user.name} ${user.surname}`,
+      author: createAnnouncementDto.author.trim(),
       owner_id: user.sub,
       pinned: createAnnouncementDto.pinned ?? false,
     });
